@@ -3,93 +3,1430 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sfide Fotografiche</title>
+    <title>Lettore MP3 Semplificato</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        /* La classe 'hidden' è fondamentale per nascondere gli elementi. */
+        .hidden {
+            display: none !important; /* Forza la nascostura per sovrascrivere altri stili */
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            background-color: #0b0f1e;
-            background-image: url('https://source.unsplash.com/1600x900/?space,stars');
-            background-size: cover;
-            background-attachment: fixed;
-            color: #fff;
-            padding: 20px;
-        }
-        h1 {
-            color: #ffcc00;
-            text-shadow: 2px 2px 10px rgba(255, 204, 0, 0.8);
-        }
-        .upload-section, .gallery {
-            margin: 20px auto;
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
-            max-width: 600px;
-        }
-        .gallery {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #121212; /* Sfondo scuro */
+            color: #b3b3b3; /* Testo grigio chiaro */
             display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
+            flex-direction: column; /* Per posizionare il footer in basso */
+            overflow-y: auto;
+            min-height: 100vh; /* Assicura che il body occupi almeno l'altezza della viewport */
         }
-        .gallery img {
-            width: 150px;
-            height: 150px;
-            object-fit: cover;
-            margin: 10px;
-            border-radius: 5px;
-            border: 2px solid #ffcc00;
-            box-shadow: 0 0 10px rgba(255, 204, 0, 0.8);
+        #app-container {
+            display: flex;
+            flex-direction: column; /* Contenuto principale in colonna */
+            width: 100%;
+            flex-grow: 1; /* Permette al contenuto principale di espandersi */
         }
-        button {
-            background-color: #ffcc00;
-            color: #0b0f1e;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 5px;
+        #main-content {
+            flex-grow: 1;
+            background-color: #121212;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* Centra il contenuto */
+            padding-bottom: 90px; /* Spazio per la player bar */
+        }
+        #player-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 90px;
+            background-color: #181818; /* Darker player bar */
+            border-top: 1px solid #282828;
+            display: flex;
+            align-items: center;
+            padding: 0 1rem;
+            box-sizing: border-box;
+            z-index: 1000;
+        }
+        .progress-bar-container {
+            width: 100%;
+            height: 6px; /* Aumentato lo spessore */
+            background-color: #535353;
+            border-radius: 3px;
             cursor: pointer;
-            font-size: 16px;
+            margin-top: 1rem;
         }
-        button:hover {
-            background-color: #ff9900;
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background-color: #1DB954; /* Spotify green */
+            border-radius: 3px;
+            transition: width 0.1s linear; /* Transizione più fluida */
+        }
+        .volume-slider {
+            -webkit-appearance: none;
+            width: 100px; /* Larghezza aumentata */
+            height: 6px; /* Spessore aumentato */
+            background: #535353;
+            outline: none;
+            opacity: 0.7;
+            transition: opacity .2s;
+            border-radius: 3px;
+        }
+        .volume-slider:hover {
+            opacity: 1;
+        }
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px; /* Dimensione aumentata */
+            height: 16px; /* Dimensione aumentata */
+            border-radius: 50%;
+            background: #1DB954;
+            cursor: pointer;
+        }
+        .volume-slider::-moz-range-thumb {
+            width: 16px; /* Dimensione aumentata */
+            height: 16px; /* Dimensione aumentata */
+            border-radius: 50%;
+            background: #1DB954;
+            cursor: pointer;
+        }
+
+        /* Canvas styling - Equalizzatore Quadrato */
+        #visualizer-canvas {
+            width: 100%;
+            aspect-ratio: 1 / 1; /* Forza la forma quadrata */
+            max-width: 400px; /* Limita la dimensione massima per il quadrato */
+            background-color: #000; /* Sfondo nero per il visualizzatore */
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            margin-left: auto; /* Centra orizzontalmente */
+            margin-right: auto; /* Centra orizzontalmente */
+        }
+
+        /* Settings Modal */
+        #settings-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+        .modal-content {
+            background-color: #181818;
+            border-radius: 1rem;
+            padding: 2rem;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+            color: #b3b3b3;
+            position: relative;
+        }
+        .modal-content h2 {
+            color: #fff;
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        .modal-content button.close-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            color: #b3b3b3;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        .tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid #282828;
+        }
+        .tabs button {
+            padding: 0.75rem 1.5rem;
+            background: none;
+            border: none;
+            color: #b3b3b3;
+            font-weight: 600;
+            cursor: pointer;
+            transition: color 0.2s ease, border-bottom 0.2s ease;
+            border-bottom: 3px solid transparent;
+        }
+        .tabs button.active {
+            color: #1DB954;
+            border-bottom-color: #1DB954;
+        }
+        .tab-content {
+            padding: 1rem 0;
+        }
+
+        /* Equalizzatore Verticale */
+        .eq-controls {
+            display: flex;
+            flex-direction: row; /* Bande disposte orizzontalmente */
+            justify-content: space-around;
+            align-items: flex-end; /* Allinea gli slider in basso */
+            gap: 1.5rem; /* Spazio tra le bande verticali */
+            height: 200px; /* Altezza per gli slider verticali */
+            padding-bottom: 2rem; /* Spazio per le etichette sotto gli slider ruotati */
+            width: 100%;
+        }
+        .eq-band {
+            display: flex;
+            flex-direction: column; /* Etichetta sopra lo slider */
+            align-items: center;
+            position: relative; /* Per posizionare lo slider ruotato */
+            height: 100%; /* Occupa l'altezza completa di eq-controls */
+            justify-content: flex-end; /* Spinge il contenuto verso il basso */
+        }
+        .eq-band label {
+            position: absolute;
+            top: -1.5rem; /* Posiziona l'etichetta sopra lo slider */
+            white-space: nowrap;
+            transform: translateX(-50%); /* Centra l'etichetta */
+            left: 50%;
+            color: #fff;
+            font-weight: 500;
+        }
+        .eq-slider-wrapper {
+            height: 100%; /* Spazio per lo slider effettivo */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            width: 30px; /* Larghezza del contenitore per lo slider ruotato */
+        }
+        .eq-slider {
+            width: 150px; /* Questa è la lunghezza effettiva quando ruotato */
+            height: 6px; /* Questo è lo spessore effettivo quando ruotato */
+            transform: rotate(-90deg);
+            transform-origin: center; /* Ruota attorno al suo centro */
+            position: absolute; /* Permette un posizionamento preciso all'interno del wrapper */
+            left: 50%;
+            top: 50%;
+            margin-left: -75px; /* Metà della larghezza per centrarlo */
+            margin-top: -3px; /* Metà dell'altezza per centrarlo */
+        }
+        .eq-band-value {
+            margin-top: 0.5rem; /* Spazio sotto lo slider ruotato */
+            color: #b3b3b3;
+            font-size: 0.85rem;
+        }
+
+        .playback-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .similar-songs-list-item {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #383838;
+        }
+        .similar-songs-list-item:last-child {
+            border-bottom: none;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            #main-content {
+                padding: 0.5rem;
+            }
+            #player-bar {
+                flex-direction: column;
+                height: auto;
+                padding: 0.5rem;
+            }
+            #player-controls {
+                margin-top: 0.5rem;
+                width: 100%;
+                justify-content: center;
+            }
+            #song-info {
+                text-align: center;
+                margin-bottom: 0.5rem;
+            }
+            #progress-section {
+                width: 100%;
+                margin-top: 0.5rem;
+            }
+            #volume-section {
+                display: none; /* Hide volume on small screens */
+            }
+            #visualizer-canvas {
+                height: auto; /* Lascia che aspect-ratio gestisca l'altezza */
+                max-width: 100%; /* Assicurati che non superi la larghezza del contenitore */
+            }
+            .modal-content {
+                padding: 1.5rem;
+            }
+            .modal-content h2 {
+                font-size: 1.75rem;
+            }
+            .tabs button {
+                padding: 0.5rem 1rem;
+                font-size: 0.9rem;
+            }
+            .eq-controls {
+                flex-direction: column; /* Torna a colonna su schermi piccoli */
+                height: auto;
+                padding-bottom: 1rem;
+                gap: 1rem;
+            }
+            .eq-band {
+                flex-direction: row; /* Etichetta a sinistra dello slider */
+                align-items: center;
+                justify-content: flex-start;
+                height: auto;
+            }
+            .eq-band label {
+                position: static;
+                transform: none;
+                left: auto;
+                width: 80px; /* Larghezza fissa per etichetta */
+            }
+            .eq-slider-wrapper {
+                height: auto;
+                width: auto;
+            }
+            .eq-slider {
+                transform: none; /* Rimuovi la rotazione */
+                width: 100%; /* Ritorna alla larghezza normale */
+                position: static;
+                margin: 0;
+                flex-grow: 1;
+            }
+            .eq-band-value {
+                margin-top: 0;
+                margin-left: 0.5rem;
+            }
+        }
+
+        /* Stile per il messaggio temporaneo */
+        #message-box {
+            transition: opacity 0.3s ease-in-out;
+            opacity: 1;
+        }
+        #message-box.hidden {
+            opacity: 0;
+            pointer-events: none; /* Rende l'elemento non cliccabile quando nascosto */
+        }
+
+        /* Footer styles */
+        footer {
+            background-color: #000;
+            color: #b3b3b3;
+            padding: 1.5rem;
+            text-align: center;
+            font-size: 0.85rem;
+            border-top: 1px solid #282828;
+            margin-top: auto; /* Spinge il footer in fondo */
+        }
+        footer a {
+            color: #1DB954;
+            text-decoration: none;
+            margin: 0 0.5rem;
+        }
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Stili per l'elenco dei brani caricati */
+        #loaded-songs-section {
+            background-color: #282828;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-top: 2rem;
+            width: 100%;
+            max-width: 400px; /* Limita la larghezza per un aspetto più pulito */
+        }
+
+        #loaded-songs-list {
+            list-style: none;
+            padding: 0;
+            max-height: 150px; /* Altezza fissa per lo scorrimento */
+            overflow-y: auto;
+            margin-top: 0.5rem;
+        }
+
+        .loaded-song-item {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #383838;
+            font-size: 0.9rem;
+            color: #e0e0e0;
+            display: flex; /* Per allineare testo e pulsanti */
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .loaded-song-item:last-child {
+            border-bottom: none;
+        }
+
+        .loaded-song-item .flex-grow {
+            cursor: pointer; /* Indica che il testo del brano è cliccabile */
+            padding-right: 0.5rem; /* Spazio tra testo e pulsanti */
+        }
+
+        .loaded-song-item button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.25rem; /* Padding per rendere i pulsanti più grandi al tocco */
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
     </style>
 </head>
 <body>
-    <h1>Sfida Fotografica della Settimana</h1>
-    <p>Tema: <strong>Esplorazione Spaziale</strong></p>
+    <div id="app-container">
+        <!-- Main Content -->
+        <main id="main-content">
+            <header class="flex items-center justify-between w-full max-w-xl mb-6">
+                <h1 class="text-white text-3xl font-bold">Lettore MP3</h1>
+                <button id="settings-btn" class="text-gray-400 hover:text-white transition-colors">
+                    <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.09-.75-1.7-.99L15 2h-4l-.29 2.44c-.61.24-1.17.59-1.7.99l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.12.22-.07.49.12.64l2.11 1.65c-.04.32-.07.64-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24-.42-.12-.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.09.75 1.7.99L11 22h4l.29-2.44c.61-.24 1.17-.59 1.7-.99l2.49 1c.22.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/>
+                    </svg>
+                </button>
+            </header>
 
-    <div class="upload-section">
-        <h2>Carica la tua foto</h2>
-        <input type="file" id="fileInput" accept="image/*">
-        <button onclick="uploadPhoto()">Carica</button>
+            <!-- Home Section (now the main content area) -->
+            <section id="home-section" class="flex flex-col items-center w-full max-w-xl">
+                <!-- Visualizer Canvas -->
+                <canvas id="visualizer-canvas"></canvas>
+
+                <!-- Song Info -->
+                <div id="song-info" class="flex flex-col items-center gap-2 mb-4">
+                    <img id="current-song-cover" src="https://placehold.co/100x100/444444/ffffff?text=🎵" alt="Copertina Brano" class="w-24 h-24 rounded-lg shadow-lg">
+                    <p id="current-song-title" class="text-white font-semibold text-xl mt-2">Nessun brano caricato</p>
+                    <p id="current-song-artist" class="text-sm text-gray-400">Carica un file audio</p>
+                </div>
+
+                <!-- Progress Section -->
+                <div id="progress-section" class="flex items-center gap-2 w-full">
+                    <span id="current-time" class="text-xs text-gray-400">0:00</span>
+                    <div class="progress-bar-container flex-grow" id="progress-bar-container">
+                        <div class="progress-bar" id="progress-bar"></div>
+                    </div>
+                    <span id="total-time" class="text-xs text-gray-400">0:00</span>
+                </div>
+
+                <!-- Player Controls -->
+                <div id="player-controls" class="flex items-center justify-center gap-6 w-full mt-4">
+                    <!-- Previous Button -->
+                    <button id="prev-btn" class="text-gray-400 hover:text-white transition-colors">
+                        <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M6 6h2v12H6zm3.5 6l8.5 6V6l-8.5 6z"/>
+                        </svg>
+                    </button>
+                    <!-- Play/Pause Button -->
+                    <button id="play-pause-btn" class="text-white bg-green-500 rounded-full p-3 hover:scale-105 transition-transform shadow-lg">
+                        <svg id="play-icon" class="w-10 h-10" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z"/>
+                        </svg>
+                        <svg id="pause-icon" class="w-10 h-10 hidden" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                        </svg>
+                    </button>
+                    <!-- Next Button -->
+                    <button id="next-btn" class="text-gray-400 hover:text-white transition-colors">
+                        <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M18 6h-2v12h2zm-9.5 6L1 6v12l8.5-6z"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Volume Section -->
+                <div id="volume-section" class="flex items-center gap-3 w-full justify-center mt-2">
+                    <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                        </svg>
+                    <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.7" class="volume-slider">
+                </div>
+
+                <!-- Upload Audio Button (Moved here) -->
+                <button id="upload-audio-btn" class="bg-green-500 text-white font-bold py-2 px-4 rounded-full hover:bg-green-600 transition-colors shadow-md mt-6">
+                    Carica brani
+                </button>
+                <input type="file" id="audio-file-input" accept="audio/*" multiple class="hidden">
+
+                <!-- Suggest Similar Songs Button (Moved here) -->
+                <button id="suggest-similar-songs-btn" class="bg-orange-600 text-white font-bold py-2 px-4 rounded-full hover:bg-orange-700 transition-colors mt-4 shadow-md">
+                    Suggerisci Brani Simili
+                </button>
+                <!-- Similar Songs Display -->
+                <div id="similar-songs-display" class="mt-4 bg-gray-800 p-4 rounded-lg w-full hidden">
+                    <h3 class="text-white font-semibold text-lg mb-2">Brani Simili:</h3>
+                    <ul id="similar-songs-list" class="list-disc list-inside text-gray-300"></ul>
+                    <p id="similar-songs-status" class="text-sm text-gray-400 hidden">Ricerca in corso...</p>
+                </div>
+
+                <!-- NEW: Loaded Songs List Section -->
+                <div id="loaded-songs-section" class="mt-8">
+                    <h3 class="text-white font-semibold text-lg mb-2">Brani Caricati:</h3>
+                    <ul id="loaded-songs-list" class="list-disc list-inside text-gray-300">
+                        <!-- I brani caricati verranno inseriti qui dinamicamente -->
+                    </ul>
+                    <p id="loaded-songs-status" class="text-sm text-gray-400 hidden">Nessun brano caricato.</p>
+                </div>
+
+                <!-- NEW: Privacy Policy Section -->
+                <section id="privacy-policy-section" class="hidden mt-8 bg-gray-800 p-4 rounded-lg w-full">
+                    <h3 class="text-white font-semibold text-lg mb-2">Informativa sulla Privacy</h3>
+                    <p class="text-sm text-gray-300 leading-relaxed">
+                        Benvenuto nel nostro Lettore MP3 Semplificato. La tua privacy è importante per noi. Questa applicazione è progettata per funzionare localmente nel tuo browser e non raccoglie, archivia o trasmette alcuna informazione personale o dati audio dai tuoi dispositivi.
+                        <br><br>
+                        **Dati raccolti:** Non raccogliamo alcun dato personale identificabile.
+                        <br>
+                        **File audio:** I file audio che carichi rimangono esclusivamente sul tuo dispositivo e non vengono caricati su alcun server. Vengono processati localmente per la riproduzione.
+                        <br>
+                        **Servizi di terze parti:** La funzionalità "Suggerisci Brani Simili" utilizza un'API di Google Gemini. Le richieste a questa API non includono dati personali o informazioni sui tuoi file audio. Vengono inviati solo il titolo e l'artista del brano attualmente in riproduzione (se non è un "File locale") per ottenere suggerimenti. Google ha le proprie politiche sulla privacy per l'uso delle sue API.
+                        <br><br>
+                        **Modifiche a questa informativa:** Potremmo aggiornare questa informativa di tanto in tanto. Ti invitiamo a rivederla periodicamente.
+                        <br>
+                        Per qualsiasi domanda, contatta: [La tua email o contatto qui].
+                    </p>
+                    <button class="text-green-500 mt-4 hover:underline" onclick="document.getElementById('privacy-policy-section').classList.add('hidden');">Chiudi</button>
+                </section>
+
+                <!-- NEW: Cookie Policy Section -->
+                <section id="cookie-policy-section" class="hidden mt-4 bg-gray-800 p-4 rounded-lg w-full">
+                    <h3 class="text-white font-semibold text-lg mb-2">Informativa sui Cookie</h3>
+                    <p class="text-sm text-gray-300 leading-relaxed">
+                        Questo sito web utilizza cookie tecnici essenziali per il suo funzionamento.
+                        <br><br>
+                        **Cookie tecnici:** Questi cookie sono strettamente necessari per permettere la navigazione del sito e l'utilizzo delle sue funzionalità, come la riproduzione audio e la gestione delle impostazioni dell'equalizzatore. Senza questi cookie, alcune parti del sito potrebbero non funzionare correttamente. Non richiedono il tuo consenso.
+                        <br>
+                        **Cookie di terze parti:** La funzionalità "Suggerisci Brani Simili" potrebbe indirettamente interagire con servizi di terze parti (Google Gemini API) che potrebbero utilizzare i propri cookie o tecnologie simili. Ti invitiamo a consultare le politiche sui cookie di Google per maggiori informazioni.
+                        <br><br>
+                        **Gestione dei cookie:** Puoi configurare il tuo browser per rifiutare tutti i cookie o per indicare quando un cookie viene inviato. Tuttavia, se disabiliti i cookie, alcune funzionalità del sito potrebbero non essere disponibili.
+                    </p>
+                    <button class="text-green-500 mt-4 hover:underline" onclick="document.getElementById('cookie-policy-section').classList.add('hidden');">Chiudi</button>
+                </section>
+
+            </section>
+        </main>
+
+        <!-- Player Bar (bottom fixed) -->
+        <div id="player-bar">
+            <div id="song-info-bar" class="flex items-center gap-3 w-1/4 sm:w-auto flex-shrink-0">
+                <img id="current-song-cover-bar" src="https://placehold.co/60x60/444444/ffffff?text=S" alt="Song Cover" class="w-14 h-14 rounded">
+                <div>
+                    <p id="current-song-title-bar" class="text-white font-semibold text-sm">Titolo Brano</p>
+                    <p id="current-song-artist-bar" class="text-xs text-gray-400">Artista</p>
+                </div>
+            </div>
+
+            <div id="player-controls-bar-main" class="flex flex-col items-center flex-grow mx-4">
+                <div class="flex items-center gap-4 mb-2">
+                    <!-- Previous Button -->
+                    <button class="text-gray-400 hover:text-white transition-colors" id="prev-btn-bar">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M6 6h2v12H6zm3.5 6l8.5 6V6l-8.5 6z"/>
+                        </svg>
+                    </button>
+                    <!-- Play/Pause Button -->
+                    <button id="play-pause-btn-bar" class="text-white bg-green-500 rounded-full p-2 hover:scale-105 transition-transform">
+                        <svg id="play-icon-bar" class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z"/>
+                        </svg>
+                        <svg id="pause-icon-bar" class="w-8 h-8 hidden" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                        </svg>
+                    </button>
+                    <!-- Next Button -->
+                    <button class="text-gray-400 hover:text-white transition-colors" id="next-btn-bar">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M18 6h-2v12h2zm-9.5 6L1 6v12l8.5-6z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div id="progress-section-bar" class="flex items-center gap-2 w-full max-w-xl">
+                    <span id="current-time-bar" class="text-xs text-gray-400">0:00</span>
+                    <div class="progress-bar-container flex-grow" id="progress-bar-container-bar">
+                        <div class="progress-bar" id="progress-bar-bar"></div>
+                    </div>
+                    <span id="total-time-bar" class="text-xs text-gray-400">0:00</span>
+                </div>
+            </div>
+
+            <div id="volume-section-bar" class="flex items-center gap-2 w-1/4 justify-end flex-shrink-0">
+                <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                </svg>
+                <input type="range" id="volume-slider-bar" min="0" max="1" step="0.01" value="0.7" class="volume-slider">
+            </div>
+        </div>
     </div>
 
-    <div class="gallery-section">
-        <h2>Galleria</h2>
-        <div class="gallery" id="gallery"></div>
+    <!-- Settings Modal (now simplified) -->
+    <div id="settings-modal" class="hidden">
+        <div class="modal-content">
+            <button id="close-settings-btn" class="close-btn text-gray-400 hover:text-white">&times;</button>
+            <h2>Impostazioni</h2>
+
+            <div class="tabs">
+                <button id="tab-equalizer" class="active" data-tab="equalizer">Equalizzatore</button>
+                <button id="tab-playback" data-tab="playback">Riproduzione</button>
+            </div>
+
+            <div id="equalizer-tab-content" class="tab-content">
+                <div class="eq-controls">
+                    <div class="eq-band">
+                        <label for="gain-60">60 Hz (Bassi):</label>
+                        <div class="eq-slider-wrapper">
+                            <input type="range" id="gain-60" class="eq-slider" min="-20" max="20" value="0" step="1">
+                        </div>
+                        <span id="gain-60-value" class="eq-band-value">0 dB</span>
+                    </div>
+                    <div class="eq-band">
+                        <label for="gain-170">170 Hz:</label>
+                        <div class="eq-slider-wrapper">
+                            <input type="range" id="gain-170" class="eq-slider" min="-20" max="20" value="0" step="1">
+                        </div>
+                        <span id="gain-170-value" class="eq-band-value">0 dB</span>
+                    </div>
+                    <div class="eq-band">
+                        <label for="gain-350">350 Hz:</label>
+                        <div class="eq-slider-wrapper">
+                            <input type="range" id="gain-350" class="eq-slider" min="-20" max="20" value="0" step="1">
+                        </div>
+                        <span id="gain-350-value" class="eq-band-value">0 dB</span>
+                    </div>
+                    <div class="eq-band">
+                        <label for="gain-1000">1 kHz (Medi):</label>
+                        <div class="eq-slider-wrapper">
+                            <input type="range" id="gain-1000" class="eq-slider" min="-20" max="20" value="0" step="1">
+                        </div>
+                        <span id="gain-1000-value" class="eq-band-value">0 dB</span>
+                    </div>
+                    <div class="eq-band">
+                        <label for="gain-3500">3.5 kHz:</label>
+                        <div class="eq-slider-wrapper">
+                            <input type="range" id="gain-3500" class="eq-slider" min="-20" max="20" value="0" step="1">
+                        </div>
+                        <span id="gain-3500-value" class="eq-band-value">0 dB</span>
+                    </div>
+                    <div class="eq-band">
+                        <label for="gain-10000">10 kHz (Alti):</label>
+                        <div class="eq-slider-wrapper">
+                            <input type="range" id="gain-10000" class="eq-slider" min="-20" max="20" value="0" step="1">
+                        </div>
+                        <span id="gain-10000-value" class="eq-band-value">0 dB</span>
+                    </div>
+                </div>
+                <button id="reset-eq-btn" class="bg-gray-700 text-white font-bold py-2 px-4 rounded-full hover:bg-gray-600 transition-colors mt-4 mx-auto block">
+                    Reset Equalizzatore
+                </button>
+            </div>
+
+            <div id="playback-tab-content" class="tab-content hidden">
+                <div class="playback-controls">
+                    <label for="sleep-timer-input" class="text-white font-semibold">Timer di spegnimento (minuti):</label>
+                    <div class="flex items-center gap-2">
+                        <input type="number" id="sleep-timer-input" min="1" value="30" class="w-24 p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500">
+                        <button id="set-sleep-timer-btn" class="bg-green-500 text-white font-bold py-2 px-4 rounded-full hover:bg-green-600 transition-colors">
+                            Imposta
+                        </button>
+                        <button id="cancel-sleep-timer-btn" class="bg-red-500 text-white font-bold py-2 px-4 rounded-full hover:bg-red-600 transition-colors hidden">
+                            Annulla
+                        </button>
+                    </div>
+                    <p id="sleep-timer-status" class="text-sm text-gray-400 mt-1"></p>
+
+                    <label for="gap-time-input" class="text-white font-semibold mt-4">Pausa tra i brani (secondi):</label>
+                    <div class="flex items-center gap-2">
+                        <input type="number" id="gap-time-input" min="0" value="0" class="w-24 p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500">
+                        <button id="set-gap-time-btn" class="bg-green-500 text-white font-bold py-2 px-4 rounded-full hover:bg-green-600 transition-colors">
+                            Applica
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <!-- Message Box for user feedback -->
+    <div id="message-box" class="hidden fixed bottom-4 left-1/2 -translate-x-1/2 bg-gray-800 text-white p-3 rounded-lg shadow-lg z-3000">
+        <p id="message-text"></p>
+    </div>
+
+    <audio id="audio-player"></audio>
+
+    <footer>
+        <p>&copy; 2024 Lettore MP3 Semplificato. Tutti i diritti riservati.</p>
+        <p>
+            <a href="#" id="privacy-policy-link">Informativa sulla Privacy</a> |
+            <a href="#" id="cookie-policy-link">Informativa sui Cookie</a> |
+            <a href="#">Termini di Servizio</a>
+        </p>
+        <p class="text-xs text-gray-500 mt-2">
+            Questo sito utilizza cookie tecnici e di terze parti per migliorare l'esperienza utente. Continuando la navigazione accetti l'utilizzo dei cookie.
+        </p>
+    </footer>
 
     <script>
-        function uploadPhoto() {
-            const fileInput = document.getElementById('fileInput');
-            const gallery = document.getElementById('gallery');
-            
-            if (fileInput.files.length > 0) {
-                const file = fileInput.files[0];
-                const reader = new FileReader();
-                
-                reader.onload = function (e) {
-                    const img = document.createElement('img');
-                    img.src = e.target.result;
-                    gallery.appendChild(img);
-                }
-                
-                reader.readAsDataURL(file);
-            } else {
-                alert('Seleziona un file prima di caricarlo!');
+        // Elementi DOM principali del lettore
+        const audioPlayer = document.getElementById('audio-player');
+        const playPauseBtn = document.getElementById('play-pause-btn'); // Pulsante Play/Pause nella sezione principale
+        const playIcon = document.getElementById('play-icon');
+        const pauseIcon = document.getElementById('pause-icon');
+        const progressBar = document.getElementById('progress-bar');
+        const progressBarContainer = document.getElementById('progress-bar-container');
+        const currentTimeSpan = document.getElementById('current-time');
+        const totalTimeSpan = document.getElementById('total-time');
+        const volumeSlider = document.getElementById('volume-slider');
+        const currentSongCover = document.getElementById('current-song-cover');
+        const currentSongTitle = document.getElementById('current-song-title');
+        const currentSongArtist = document.getElementById('current-song-artist');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+
+        // Elementi DOM della player bar in basso (duplicati per mantenere la struttura Spotify)
+        const playPauseBtnBar = document.getElementById('play-pause-btn-bar');
+        const playIconBar = document.getElementById('play-icon-bar');
+        const pauseIconBar = document.getElementById('pause-icon-bar');
+        const progressBarBar = document.getElementById('progress-bar-bar');
+        const progressBarContainerBar = document.getElementById('progress-bar-container-bar');
+        const currentTimeSpanBar = document.getElementById('current-time-bar');
+        const totalTimeSpanBar = document.getElementById('total-time-bar');
+        const volumeSliderBar = document.getElementById('volume-slider-bar');
+        const currentSongCoverBar = document.getElementById('current-song-cover-bar');
+        const currentSongTitleBar = document.getElementById('current-song-title-bar');
+        const currentSongArtistBar = document.getElementById('current-song-artist-bar');
+        const prevBtnBar = document.getElementById('prev-btn-bar');
+        const nextBtnBar = document.getElementById('next-btn-bar');
+
+
+        const uploadAudioBtn = document.getElementById('upload-audio-btn');
+        const audioFileInput = document.getElementById('audio-file-input');
+
+        const visualizerCanvas = document.getElementById('visualizer-canvas');
+        const canvasCtx = visualizerCanvas.getContext('2d');
+
+        const settingsBtn = document.getElementById('settings-btn');
+        const settingsModal = document.getElementById('settings-modal');
+        const closeSettingsBtn = document.getElementById('close-settings-btn');
+
+        // Equalizzatore
+        const equalizerTabBtn = document.getElementById('tab-equalizer');
+        const playbackTabBtn = document.getElementById('tab-playback');
+        const equalizerTabContent = document.getElementById('equalizer-tab-content');
+        const playbackTabContent = document.getElementById('playback-tab-content');
+        const eqSliders = {};
+        const eqBandValues = {};
+        const resetEqBtn = document.getElementById('reset-eq-btn');
+
+        // Riproduzione
+        const sleepTimerInput = document.getElementById('sleep-timer-input');
+        const setSleepTimerBtn = document.getElementById('set-sleep-timer-btn');
+        const cancelSleepTimerBtn = document.getElementById('cancel-sleep-timer-btn');
+        const sleepTimerStatus = document.getElementById('sleep-timer-status');
+        const gapTimeInput = document.getElementById('gap-time-input');
+        const setGapTimeBtn = document.getElementById('set-gap-time-btn');
+
+        // Similar Songs
+        const suggestSimilarSongsBtn = document.getElementById('suggest-similar-songs-btn');
+        const similarSongsDisplay = document.getElementById('similar-songs-display');
+        const similarSongsList = document.getElementById('similar-songs-list');
+        const similarSongsStatus = document.getElementById('similar-songs-status');
+
+        // Loaded Songs List Elements
+        const loadedSongsSection = document.getElementById('loaded-songs-section');
+        const loadedSongsList = document.getElementById('loaded-songs-list');
+        const loadedSongsStatus = document.getElementById('loaded-songs-status');
+
+        // Privacy and Cookie Policy Elements
+        const privacyPolicyLink = document.getElementById('privacy-policy-link');
+        const cookiePolicyLink = document.getElementById('cookie-policy-link');
+        const privacyPolicySection = document.getElementById('privacy-policy-section');
+        const cookiePolicySection = document.getElementById('cookie-policy-section');
+
+
+        // Message Box elements
+        const messageBox = document.getElementById('message-box');
+        const messageText = document.getElementById('message-text');
+
+        // Variabili globali per l'audio
+        let audioContext;
+        let analyser;
+        let sourceNode;
+        let eqFilters = [];
+        const EQ_FREQUENCIES = [60, 170, 350, 1000, 3500, 10000]; // Frequenze per le bande dell'equalizzatore
+
+        let bufferLength;
+        let dataArray;
+
+        let playlist = []; // La playlist rimane per la gestione interna dei brani caricati
+        let currentSongIndex = -1; // Nessun brano selezionato inizialmente
+        let sleepTimerTimeout;
+        let gapBetweenTracks = 0; // Secondi di pausa
+
+        // --- Funzioni di Utilità ---
+
+        // Funzione per mostrare messaggi all'utente (non bloccante)
+        function showMessage(message, duration = 3000) {
+            messageText.textContent = message;
+            messageBox.classList.remove('hidden');
+            setTimeout(() => {
+                messageBox.classList.add('hidden');
+            }, duration);
+        }
+
+        // Formatta il tempo in minuti:secondi
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+
+        // --- Gestione Audio e Visualizzatore ---
+
+        // Inizializza il contesto audio e i nodi dell'equalizzatore
+        function initAudioContext() {
+            // Se il contesto audio non è ancora stato creato, crealo
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                sourceNode = audioContext.createMediaElementSource(audioPlayer);
+
+                // Crea i nodi del filtro per l'equalizzatore
+                EQ_FREQUENCIES.forEach((freq, index) => {
+                    const filter = audioContext.createBiquadFilter();
+                    filter.type = 'peaking'; // Filtro peaking per le bande centrali
+                    filter.frequency.value = freq;
+                    filter.Q.value = 1; // Fattore di qualità
+                    filter.gain.value = 0; // Guadagno iniziale a 0 dB
+                    eqFilters.push(filter);
+
+                    // Collega i filtri in cascata
+                    if (index === 0) {
+                        sourceNode.connect(filter);
+                    } else {
+                        eqFilters[index - 1].connect(filter);
+                    }
+                });
+
+                // Collega l'ultimo filtro all'analizzatore
+                analyser = audioContext.createAnalyser();
+                eqFilters[eqFilters.length - 1].connect(analyser);
+                analyser.connect(audioContext.destination); // Collega l'analizzatore all'uscita
+
+                analyser.fftSize = 256;
+                bufferLength = analyser.frequencyBinCount;
+                dataArray = new Uint8Array(bufferLength);
+                drawVisualizer(); // Avvia il ciclo di disegno del visualizzatore
+            } else if (audioContext.state === 'suspended') {
+                // Se il contesto audio è sospeso (es. dopo interazione utente), riprendilo
+                audioContext.resume();
             }
         }
+
+        // Disegna il visualizzatore (equalizzatore verticale)
+        function drawVisualizer() {
+            requestAnimationFrame(drawVisualizer);
+
+            if (!analyser) return; // Se l'analizzatore non è inizializzato, esci
+
+            analyser.getByteFrequencyData(dataArray);
+
+            // Assicurati che il canvas sia quadrato
+            visualizerCanvas.width = visualizerCanvas.clientWidth;
+            visualizerCanvas.height = visualizerCanvas.clientWidth; // Altezza uguale alla larghezza
+
+            canvasCtx.clearRect(0, 0, visualizerCanvas.width, visualizerCanvas.height); // Pulisce il canvas
+
+            const barWidth = (visualizerCanvas.width / bufferLength) * 2.5; // Larghezza delle singole barre
+            let x = 0; // Posizione X di partenza per disegnare le barre
+
+            for (let i = 0; i < bufferLength; i++) {
+                let barHeight = dataArray[i] / 2; // Altezza della barra in base ai dati di frequenza
+
+                // Crea un gradiente di colore per le barre, dal verde scuro al verde chiaro
+                const gradient = canvasCtx.createLinearGradient(0, visualizerCanvas.height, 0, 0);
+                gradient.addColorStop(0, '#1DB954'); // Verde Spotify (base)
+                gradient.addColorStop(1, '#6EE7B7'); // Verde più chiaro (cima)
+
+                canvasCtx.fillStyle = gradient; // Imposta il colore di riempimento
+                // Disegna la barra verticale: parte da 'visualizerCanvas.height - barHeight' (dal basso)
+                // e si estende verso l'alto per 'barHeight'
+                canvasCtx.fillRect(x, visualizerCanvas.height - barHeight, barWidth, barHeight);
+
+                x += barWidth + 1; // Sposta la posizione X per la prossima barra (aggiungendo un piccolo spazio)
+            }
+        }
+
+        // --- Gestione Riproduzione ---
+
+        // Carica e riproduce un brano dalla playlist
+        function playSong(index) {
+            if (index < 0 || index >= playlist.length) {
+                console.warn("Indice brano non valido.");
+                showMessage("Indice brano non valido. Impossibile riprodurre.");
+                return;
+            }
+
+            currentSongIndex = index;
+            const song = playlist[currentSongIndex];
+            audioPlayer.src = song.url;
+
+            // Aggiorna le informazioni del brano sia nella sezione principale che nella player bar
+            currentSongCover.src = song.cover;
+            currentSongTitle.textContent = song.title;
+            currentSongArtist.textContent = song.artist;
+            currentSongCoverBar.src = song.cover;
+            currentSongTitleBar.textContent = song.title;
+            currentSongArtistBar.textContent = song.artist;
+
+            audioPlayer.load();
+
+            // Assicurati che l'audioContext sia inizializzato e ripreso prima di riprodurre
+            initAudioContext(); 
+            audioPlayer.play()
+                .then(() => {
+                    playIcon.classList.add('hidden');
+                    pauseIcon.classList.remove('hidden');
+                    playIconBar.classList.add('hidden');
+                    pauseIconBar.classList.remove('hidden');
+                })
+                .catch(error => {
+                    console.error("Errore durante la riproduzione:", error);
+                    showMessage("Impossibile riprodurre il brano. Controlla il file o riprova.");
+                });
+        }
+
+        // Riproduce il brano successivo
+        function nextSong() {
+            if (playlist.length === 0) {
+                showMessage("La playlist è vuota.");
+                return;
+            }
+            let newIndex = (currentSongIndex + 1) % playlist.length;
+            playSong(newIndex);
+        }
+
+        // Riproduce il brano precedente
+        function prevSong() {
+            if (playlist.length === 0) {
+                showMessage("La playlist è vuota.");
+                return;
+            }
+            let newIndex = (currentSongIndex - 1 + playlist.length) % playlist.length;
+            playSong(newIndex);
+        }
+
+        // --- Event Listeners Principali ---
+
+        // Gestione Play/Pause per il pulsante principale e della barra inferiore
+        function togglePlayPause() {
+            if (audioPlayer.paused) {
+                // Se non c'è un brano selezionato ma la playlist non è vuota, riproduci il primo
+                if (currentSongIndex === -1 && playlist.length > 0) {
+                    playSong(0);
+                } else if (currentSongIndex !== -1) {
+                    // Altrimenti, riprendi la riproduzione del brano corrente
+                    initAudioContext(); // Assicurati che l'audioContext sia ripreso
+                    audioPlayer.play();
+                    playIcon.classList.add('hidden');
+                    pauseIcon.classList.remove('hidden');
+                    playIconBar.classList.add('hidden');
+                    pauseIconBar.classList.remove('hidden');
+                } else {
+                    showMessage("Carica un brano per iniziare la riproduzione.");
+                }
+            } else {
+                audioPlayer.pause();
+                playIcon.classList.remove('hidden');
+                pauseIcon.classList.add('hidden');
+                playIconBar.classList.remove('hidden');
+                pauseIconBar.classList.add('hidden');
+            }
+        }
+        playPauseBtn.addEventListener('click', togglePlayPause);
+        playPauseBtnBar.addEventListener('click', togglePlayPause);
+
+
+        // Gestione Timeupdate per entrambi i progress bar e span
+        audioPlayer.addEventListener('timeupdate', () => {
+            if (!isNaN(audioPlayer.duration)) {
+                const progress = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+                progressBar.style.width = `${progress}%`;
+                currentTimeSpan.textContent = formatTime(audioPlayer.currentTime);
+                progressBarBar.style.width = `${progress}%`;
+                currentTimeSpanBar.textContent = formatTime(audioPlayer.currentTime);
+            }
+        });
+
+        // Gestione Loadedmetadata per entrambi i total time span
+        audioPlayer.addEventListener('loadedmetadata', () => {
+            if (!isNaN(audioPlayer.duration)) {
+                totalTimeSpan.textContent = formatTime(audioPlayer.duration);
+                totalTimeSpanBar.textContent = formatTime(audioPlayer.duration);
+            } else {
+                totalTimeSpan.textContent = '0:00';
+                totalTimeSpanBar.textContent = '0:00';
+            }
+        });
+
+        // Gestione Ended
+        audioPlayer.addEventListener('ended', () => {
+            playIcon.classList.remove('hidden');
+            pauseIcon.classList.add('hidden');
+            playIconBar.classList.remove('hidden');
+            pauseIconBar.classList.add('hidden');
+            progressBar.style.width = '0%';
+            currentTimeSpan.textContent = '0:00';
+            progressBarBar.style.width = '0%';
+            currentTimeSpanBar.textContent = '0:00';
+
+            if (gapBetweenTracks > 0) {
+                showMessage(`Pausa di ${gapBetweenTracks} secondi prima del prossimo brano...`);
+                setTimeout(() => {
+                    nextSong();
+                }, gapBetweenTracks * 1000);
+            } else {
+                nextSong();
+            }
+        });
+
+        // Gestione Click sulla progress bar principale e della barra inferiore
+        function handleProgressBarClick(e) {
+            // 'this' si riferisce all'elemento su cui è stato cliccato (progressBarContainer o progressBarContainerBar)
+            if (!isNaN(audioPlayer.duration) && audioPlayer.duration > 0) {
+                const width = this.clientWidth; 
+                const clickX = e.offsetX;
+                const duration = audioPlayer.duration;
+                audioPlayer.currentTime = (clickX / width) * duration;
+            } else {
+                showMessage("Nessun brano caricato o durata non disponibile.");
+            }
+        }
+        progressBarContainer.addEventListener('click', handleProgressBarClick);
+        progressBarContainerBar.addEventListener('click', handleProgressBarClick);
+
+
+        // Gestione Volume per entrambi gli slider
+        function handleVolumeChange(e) {
+            audioPlayer.volume = e.target.value;
+            volumeSlider.value = e.target.value; // Sincronizza l'altro slider
+            volumeSliderBar.value = e.target.value; // Sincronizza l'altro slider
+        }
+        volumeSlider.addEventListener('input', handleVolumeChange);
+        volumeSliderBar.addEventListener('input', handleVolumeChange);
+
+
+        prevBtn.addEventListener('click', prevSong);
+        nextBtn.addEventListener('click', nextSong);
+        prevBtnBar.addEventListener('click', prevSong);
+        nextBtnBar.addEventListener('click', nextSong);
+
+
+        // --- Gestione Caricamento Brani (ora direttamente nella pagina principale) ---
+
+        uploadAudioBtn.addEventListener('click', () => {
+            audioFileInput.click();
+        });
+
+        audioFileInput.addEventListener('change', (event) => {
+            const files = event.target.files;
+            if (files.length > 0) {
+                addSongsToPlaylist(files);
+            }
+        });
+
+        function addSongsToPlaylist(files) {
+            Array.from(files).forEach(file => {
+                const fileURL = URL.createObjectURL(file);
+                const newSong = {
+                    title: file.name.split('.').slice(0, -1).join('.'), // Rimuove l'estensione
+                    artist: "File locale", // Potresti voler estrarre l'artista dal nome del file o dai metadati
+                    cover: "https://placehold.co/100x100/000000/ffffff?text=🎵",
+                    url: fileURL
+                };
+                playlist.push(newSong);
+            });
+            updateLoadedSongsListUI(); // Aggiorna l'elenco dei brani caricati
+            showMessage(`Aggiunti ${files.length} brani alla playlist.`);
+            // Se è il primo brano aggiunto o la playlist era vuota, riproducilo automaticamente
+            if (currentSongIndex === -1 && playlist.length > 0) {
+                playSong(0);
+            }
+        }
+
+        // Function to update the displayed list of loaded songs
+        function updateLoadedSongsListUI() {
+            loadedSongsList.innerHTML = ''; // Pulisce la lista esistente
+            if (playlist.length === 0) {
+                loadedSongsStatus.classList.remove('hidden');
+                loadedSongsStatus.textContent = "Nessun brano caricato.";
+            } else {
+                loadedSongsStatus.classList.add('hidden');
+                playlist.forEach((song, index) => {
+                    const listItem = document.createElement('li');
+                    listItem.classList.add('loaded-song-item', 'flex', 'items-center', 'justify-between', 'py-2');
+                    listItem.innerHTML = `
+                        <span class="flex-grow truncate" data-index="${index}" title="${song.title} - ${song.artist}">
+                            ${index + 1}. ${song.title} - ${song.artist}
+                        </span>
+                        <div class="flex items-center gap-2">
+                            <button class="play-loaded-song-btn text-green-400 hover:text-green-500" data-index="${index}" title="Riproduci">
+                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M8 5v14l11-7z"/>
+                                </svg>
+                            </button>
+                            <button class="remove-loaded-song-btn text-red-400 hover:text-red-500" data-index="${index}" title="Rimuovi">
+                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v14zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    `;
+                    loadedSongsList.appendChild(listItem);
+                });
+
+                // Add event listeners for play buttons
+                loadedSongsList.querySelectorAll('.play-loaded-song-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const index = parseInt(e.currentTarget.dataset.index);
+                        playSong(index);
+                    });
+                });
+
+                // Add event listeners for remove buttons
+                loadedSongsList.querySelectorAll('.remove-loaded-song-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const indexToRemove = parseInt(e.currentTarget.dataset.index);
+                        removeSongFromLoadedList(indexToRemove);
+                    });
+                });
+
+                // Add event listener for clicking on the song text to play
+                loadedSongsList.querySelectorAll('.loaded-song-item .flex-grow').forEach(span => {
+                    span.addEventListener('click', (e) => {
+                        const index = parseInt(e.currentTarget.dataset.index);
+                        playSong(index);
+                    });
+                });
+            }
+        }
+
+        function removeSongFromLoadedList(indexToRemove) {
+            if (indexToRemove < 0 || indexToRemove >= playlist.length) {
+                showMessage("Indice brano non valido per la rimozione.");
+                return;
+            }
+
+            // If the currently playing song is removed
+            if (indexToRemove === currentSongIndex) {
+                audioPlayer.pause();
+                playIcon.classList.remove('hidden');
+                pauseIcon.classList.add('hidden');
+                playIconBar.classList.remove('hidden');
+                pauseIconBar.classList.add('hidden');
+                currentSongTitle.textContent = "Nessun brano caricato";
+                currentSongArtist.textContent = "Carica un file audio";
+                currentSongCover.src = "https://placehold.co/100x100/444444/ffffff?text=🎵";
+                currentSongTitleBar.textContent = "Nessun brano";
+                currentSongArtistBar.textContent = "Carica un file";
+                currentSongCoverBar.src = "https://placehold.co/60x60/444444/ffffff?text=S";
+                currentSongIndex = -1; // Reset index
+                showMessage("Brano rimosso e riproduzione interrotta.");
+            } else if (indexToRemove < currentSongIndex) {
+                // If a song before the current one is removed, decrement currentSongIndex
+                currentSongIndex--;
+                showMessage("Brano rimosso.");
+            } else {
+                showMessage("Brano rimosso.");
+            }
+
+            // Remove the song from the array
+            playlist.splice(indexToRemove, 1);
+            updateLoadedSongsListUI(); // Update the displayed list
+
+            // If the playlist becomes empty, reset player
+            if (playlist.length === 0) {
+                audioPlayer.src = '';
+                progressBar.style.width = '0%';
+                currentTimeSpan.textContent = '0:00';
+                totalTimeSpan.textContent = '0:00';
+                progressBarBar.style.width = '0%';
+                currentTimeSpanBar.textContent = '0:00';
+                totalTimeSpanBar.textContent = '0:00';
+            }
+        }
+
+
+        // --- Gestione Impostazioni (solo Equalizzatore e Riproduzione) ---
+
+        settingsBtn.addEventListener('click', () => {
+            settingsModal.classList.remove('hidden'); // Rende visibile il modal delle impostazioni
+        });
+
+        closeSettingsBtn.addEventListener('click', () => {
+            settingsModal.classList.add('hidden'); // Nasconde il modal delle impostazioni
+        });
+
+        // Gestione schede impostazioni
+        document.querySelectorAll('.tabs button').forEach(button => {
+            button.addEventListener('click', function() {
+                // Rimuove la classe 'active' da tutti i pulsanti delle schede
+                document.querySelectorAll('.tabs button').forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active'); // Aggiunge la classe 'active' al pulsante cliccato
+
+                // Nasconde tutti i contenuti delle schede
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
+                // Rende visibile il contenuto della scheda corrispondente
+                const targetTabId = this.dataset.tab + '-tab-content';
+                document.getElementById(targetTabId).classList.remove('hidden');
+            });
+        });
+
+        // --- Equalizzatore ---
+
+        // Inizializza i controlli dell'equalizzatore
+        EQ_FREQUENCIES.forEach((freq, index) => {
+            const sliderId = `gain-${freq}`;
+            const slider = document.getElementById(sliderId);
+            const valueSpan = document.getElementById(`${sliderId}-value`);
+            eqSliders[freq] = slider;
+            eqBandValues[freq] = valueSpan;
+
+            slider.addEventListener('input', () => {
+                if (eqFilters[index]) {
+                    eqFilters[index].gain.value = parseFloat(slider.value);
+                    valueSpan.textContent = `${slider.value} dB`;
+                }
+            });
+        });
+
+        resetEqBtn.addEventListener('click', () => {
+            EQ_FREQUENCIES.forEach((freq, index) => {
+                if (eqFilters[index]) {
+                    eqFilters[index].gain.value = 0;
+                    eqSliders[freq].value = 0;
+                    eqBandValues[freq].textContent = '0 dB';
+                }
+            });
+            showMessage("Equalizzatore resettato.");
+        });
+
+        // --- Timer di Spegnimento ---
+
+        setSleepTimerBtn.addEventListener('click', () => {
+            const minutes = parseInt(sleepTimerInput.value);
+            if (isNaN(minutes) || minutes <= 0) {
+                showMessage("Inserisci un numero valido di minuti per il timer (maggiore di 0).");
+                return;
+            }
+
+            // Cancella qualsiasi timer precedente
+            if (sleepTimerTimeout) {
+                clearTimeout(sleepTimerTimeout);
+            }
+
+            sleepTimerStatus.textContent = `Timer impostato: ${minutes} minuti.`;
+            cancelSleepTimerBtn.classList.remove('hidden');
+            showMessage(`Timer di spegnimento impostato per ${minutes} minuti.`);
+
+            sleepTimerTimeout = setTimeout(() => {
+                audioPlayer.pause();
+                playIcon.classList.remove('hidden');
+                pauseIcon.classList.add('hidden');
+                playIconBar.classList.remove('hidden');
+                pauseIconBar.classList.add('hidden');
+                sleepTimerStatus.textContent = "Timer scaduto. Riproduzione in pausa.";
+                cancelSleepTimerBtn.classList.add('hidden');
+                showMessage("Riproduzione messa in pausa dal timer.");
+            }, minutes * 60 * 1000);
+        });
+
+        cancelSleepTimerBtn.addEventListener('click', () => {
+            if (sleepTimerTimeout) {
+                clearTimeout(sleepTimerTimeout);
+                sleepTimerTimeout = null;
+                sleepTimerStatus.textContent = "Timer annullato.";
+                cancelSleepTimerBtn.classList.add('hidden');
+                showMessage("Timer di spegnimento annullato.");
+            }
+        });
+
+        // --- Pausa tra i Brani ---
+
+        setGapTimeBtn.addEventListener('click', () => {
+            const seconds = parseInt(gapTimeInput.value);
+            if (isNaN(seconds) || seconds < 0) {
+                showMessage("Inserisci un numero valido di secondi per la pausa (0 o più).");
+                return;
+            }
+            gapBetweenTracks = seconds;
+            showMessage(`Pausa tra i brani impostata a ${seconds} secondi.`);
+        });
+
+        // --- Suggest Similar Songs (Mantenedo la funzione AI) ---
+        suggestSimilarSongsBtn.addEventListener('click', async () => {
+            similarSongsDisplay.classList.remove('hidden'); // Ensure the display area is visible
+
+            if (currentSongIndex === -1 || playlist.length === 0) {
+                similarSongsList.innerHTML = '<li>Nessun brano in riproduzione per suggerire brani simili.</li>';
+                similarSongsStatus.classList.add('hidden');
+                showMessage("Nessun brano in riproduzione.");
+                return;
+            }
+
+            const currentSong = playlist[currentSongIndex];
+            if (currentSong.artist === "File locale") {
+                similarSongsList.innerHTML = '<li>Per suggerimenti più accurati, riproduci un brano con un artista riconosciuto.</li>';
+                similarSongsStatus.classList.add('hidden');
+                showMessage("Artista non riconosciuto per suggerimenti.");
+                return;
+            }
+
+            // Prompt raffinato per ottenere solo il JSON
+            const query = `Suggest 5 songs that are similar in style or genre to "${currentSong.title}" by "${currentSong.artist}". Provide the response as a JSON array of objects, where each object has "title" and "artist" properties. Example: [{"title": "Song Title 1", "artist": "Artist Name 1"}, {"title": "Song Title 2", "artist": "Artist Name 2"}]. Do not include any other text or formatting outside the JSON.`;
+            
+            similarSongsStatus.textContent = "Ricerca brani simili in corso...";
+            similarSongsStatus.classList.remove('hidden');
+            similarSongsList.innerHTML = '';
+            showMessage("Ricerca brani simili...");
+
+            try {
+                // IMPORTANT: You need to replace "YOUR_API_KEY_HERE" with your actual Google Gemini API key.
+                // Get your API key from Google AI Studio: https://aistudio.google.com/app/apikey
+                const apiKey = "YOUR_API_KEY_HERE"; 
+                if (apiKey === "YOUR_API_KEY_HERE" || apiKey === "") {
+                    throw new Error("API Key not configured. Please replace 'YOUR_API_KEY_HERE' with your actual Gemini API key in the code.");
+                }
+
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: query }] });
+                const payload = { 
+                    contents: chatHistory,
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "ARRAY",
+                            items: {
+                                type: "OBJECT",
+                                properties: {
+                                    "title": { "type": "STRING" },
+                                    "artist": { "type": "STRING" }
+                                },
+                                "propertyOrdering": ["title", "artist"]
+                            }
+                        }
+                    }
+                };
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const json = result.candidates[0].content.parts[0].text;
+                    const parsedJson = JSON.parse(json);
+
+                    if (Array.isArray(parsedJson) && parsedJson.length > 0) {
+                        similarSongsList.innerHTML = ''; // Clear previous results
+                        parsedJson.forEach(song => {
+                            const listItem = document.createElement('li');
+                            listItem.classList.add('similar-songs-list-item');
+                            listItem.textContent = `${song.title} - ${song.artist}`;
+                            similarSongsList.appendChild(listItem);
+                        });
+                        showMessage("Brani simili trovati!");
+                    } else {
+                        similarSongsList.innerHTML = '<li>Nessun brano simile trovato.</li>';
+                        showMessage("Nessun brano simile trovato.");
+                    }
+                    similarSongsStatus.classList.add('hidden');
+                } else {
+                    similarSongsList.innerHTML = '<li>Errore nella risposta o nessun brano simile trovato.</li>';
+                    similarSongsStatus.classList.add('hidden');
+                    showMessage("Errore nella ricerca brani simili.");
+                }
+            } catch (error) {
+                console.error("Errore durante la ricerca brani simili:", error);
+                similarSongsList.innerHTML = `<li>Si è verificato un errore durante la ricerca di brani simili: ${error.message}</li>`;
+                similarSongsStatus.classList.add('hidden');
+                showMessage(`Errore: ${error.message}`);
+            }
+        });
+
+
+        // --- Inizializzazione ---
+
+        // Ridimensiona il canvas per adattarsi al contenitore quando la finestra viene ridimensionata
+        window.addEventListener('resize', () => {
+            visualizerCanvas.width = visualizerCanvas.clientWidth;
+            visualizerCanvas.height = visualizerCanvas.clientWidth; // Altezza uguale alla larghezza per renderlo quadrato
+        });
+
+        // Chiamata iniziale per impostare le dimensioni corrette del canvas
+        window.dispatchEvent(new Event('resize'));
+
+        // Funzione per caricare un brano di esempio all'avvio se la playlist è vuota
+        function loadInitialState() {
+            // Rimosso il caricamento del brano di esempio "SoundHelix Song 1"
+            updateLoadedSongsListUI(); // Aggiorna la lista dei brani caricati (sarà vuota all'inizio)
+            showMessage("Carica brani o clicca play per iniziare.");
+        }
+
+        // Carica lo stato iniziale quando la pagina è completamente caricata
+        window.onload = loadInitialState;
+
+        // Inizializza le schede del modal al caricamento
+        document.addEventListener('DOMContentLoaded', () => {
+            // Assicurati che solo la prima scheda sia attiva all'inizio
+            document.querySelectorAll('.tabs button').forEach((btn, index) => {
+                if (index === 0) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            document.querySelectorAll('.tab-content').forEach((content, index) => {
+                if (index === 0) {
+                    content.classList.remove('hidden');
+                } else {
+                    content.classList.add('hidden');
+                }
+            });
+
+            // Event listeners per le informative su privacy e cookie
+            privacyPolicyLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                privacyPolicySection.classList.toggle('hidden');
+                cookiePolicySection.classList.add('hidden'); // Nasconde l'altra informativa se aperta
+            });
+
+            cookiePolicyLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                cookiePolicySection.classList.toggle('hidden');
+                privacyPolicySection.classList.add('hidden'); // Nasconde l'altra informativa se aperta
+            });
+        });
     </script>
 </body>
 </html>
